@@ -44,14 +44,6 @@ import fr.neamar.aloneindarkness.entity.Zombie;
 import fr.neamar.aloneindarkness.entity.ZombieLoader;
 import fr.neamar.aloneindarkness.layoutdata.WorldLayoutData;
 
-/**
- * A Google VR sample application.
- * </p><p>
- * The TreasureHunt scene consists of a planar ground grid and a floating
- * "treasure" cube. When the user looks at the cube, the cube will turn gold.
- * While gold, the user can activate the Carboard trigger, which will in turn
- * randomly reposition the cube.
- */
 public class DarknessActivity extends GvrActivity implements GvrView.StereoRenderer {
     public static final String TAG = "DarknessActivity";
 
@@ -467,10 +459,12 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         angleY = (float) Math.toRadians(angleY);
         float newY = (float) Math.tan(angleY) * objectDistance;
 
-        zombie.modelPosition[0] = posVec[0];
-        zombie.modelPosition[1] = newY;
-        zombie.modelPosition[2] = posVec[2];
+        // Bye bye!
+        zombie.kill(gvrAudioEngine);
 
+        // Model first appears directly in front of user.
+        float[] modelPosition = new float[]{posVec[0], newY, posVec[2]};
+        zombie = new Zombie(modelPosition, gvrAudioEngine);
         zombie.updateModelPosition(gvrAudioEngine);
     }
 

@@ -11,18 +11,17 @@ import fr.neamar.aloneindarkness.DarknessActivity;
 public class Zombie {
     public static String TAG = "Zombie";
     public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
+    public static final String ZOMBIE_DEATH_SOUND_FILE = "zombie_death.wav";
 
     public float[] modelCube;
     public float[] modelPosition;
 
     private int zombieSoundId = GvrAudioEngine.INVALID_ID;
-    ;
 
     public Zombie(final float[] modelPosition, final GvrAudioEngine gvrAudioEngine) {
         modelCube = new float[16];
         // Model first appears directly in front of user.
         this.modelPosition = modelPosition;
-
 
         // Avoid any delays during start-up due to decoding of sound files.
         new Thread(
@@ -89,5 +88,26 @@ public class Zombie {
         }
 
         DarknessActivity.checkGLError("updateCubePosition");
+    }
+
+    public void kill(final GvrAudioEngine gvrAudioEngine) {
+        gvrAudioEngine.stopSound(zombieSoundId);
+
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        // Start spatial audio playback of SOUND_FILE at the model postion. The returned
+                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
+                        // the cube position changes.
+                        gvrAudioEngine.preloadSoundFile(ZOMBIE_DEATH_SOUND_FILE);
+                        int deathSound = gvrAudioEngine.createSoundObject(ZOMBIE_DEATH_SOUND_FILE);
+
+                        gvrAudioEngine.setSoundObjectPosition(
+                                deathSound, modelPosition[0], modelPosition[1], modelPosition[2]);
+                        gvrAudioEngine.playSound(deathSound, false);
+                    }
+                })
+                .start();
     }
 }
