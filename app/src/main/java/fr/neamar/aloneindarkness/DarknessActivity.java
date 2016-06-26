@@ -61,7 +61,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private static final float CAMERA_Z = 0.01f;
     private static final float TIME_DELTA = 0.3f;
 
-    private static final float YAW_LIMIT = 0.25f;
+    private static final float YAW_LIMIT = 0.35f;
 
     private static final int COORDS_PER_VERTEX = 3;
 
@@ -74,7 +74,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private static final float MIN_MODEL_DISTANCE = 3.0f;
     private static final float MAX_MODEL_DISTANCE = 7.0f;
 
-    private static final String SOUND_FILE = "cube_sound.wav";
+    private static final String SOUND_FILE = "zombie_walk.wav";
 
     private final float[] lightPosInEyeSpace = new float[4];
 
@@ -535,10 +535,12 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         if (isLookingAtObject()) {
             hideObject();
+            vibrator.vibrate(200);
         }
-
-        // Always give user feedback.
-        vibrator.vibrate(50);
+        else {
+            // Always give user feedback.
+            vibrator.vibrate(50);
+        }
     }
 
     /**
@@ -561,7 +563,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Matrix.scaleM(rotationMatrix, 0, objectScalingFactor, objectScalingFactor, objectScalingFactor);
         Matrix.multiplyMV(posVec, 0, rotationMatrix, 0, modelCube, 12);
 
-        float angleY = (float) Math.random() * 80 - 40; // Angle in Y plane, between -40 and 40.
+        float angleY = (float) 0; // Angle in Y plane, between -40 and 40.
         angleY = (float) Math.toRadians(angleY);
         float newY = (float) Math.tan(angleY) * objectDistance;
 
