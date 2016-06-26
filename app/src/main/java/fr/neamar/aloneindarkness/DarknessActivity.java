@@ -94,7 +94,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private float[] tempPosition;
     private float[] headRotation;
 
-    private float objectDistance = MAX_MODEL_DISTANCE / 2.0f;
     private float floorDepth = 20f;
 
     private Vibrator vibrator;
@@ -178,7 +177,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         // Model first appears directly in front of user.
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
-        zombie = new Zombie(modelPosition, gvrAudioEngine);
+        zombie = new Zombie(modelPosition, gvrAudioEngine, 0.1f);
     }
 
     public void initializeGvrView() {
@@ -431,41 +430,27 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                     }
                 })
                 .start();
-
-
     }
 
     /**
      * Find a new random position for the object.
-     * <p/>
-     * <p>We'll rotate it around the Y-axis so it's out of sight, and then up or down by a little bit.
      */
     protected void hideObject() {
-        float[] rotationMatrix = new float[16];
-        float[] posVec = new float[4];
-
-        // First rotate in XZ plane, between 90 and 270 deg away, and scale so that we vary
-        // the object's distance from the user.
-        float angleXZ = (float) Math.random() * 180 + 90;
-        Matrix.setRotateM(rotationMatrix, 0, angleXZ, 0f, 1f, 0f);
-        float oldObjectDistance = objectDistance;
-        objectDistance =
-                (float) Math.random() * (MAX_MODEL_DISTANCE - MIN_MODEL_DISTANCE) + MIN_MODEL_DISTANCE;
-        float objectScalingFactor = objectDistance / oldObjectDistance;
-        Matrix.scaleM(rotationMatrix, 0, objectScalingFactor, objectScalingFactor, objectScalingFactor);
-        Matrix.multiplyMV(posVec, 0, rotationMatrix, 0, zombie.modelCube, 12);
-
-        float angleY = (float) 0; // Angle in Y plane, between -40 and 40.
-        angleY = (float) Math.toRadians(angleY);
-        float newY = (float) Math.tan(angleY) * objectDistance;
-
         // Bye bye!
         zombie.kill(gvrAudioEngine);
 
-        // Model first appears directly in front of user.
-        float[] modelPosition = new float[]{posVec[0], newY, posVec[2]};
-        zombie = new Zombie(modelPosition, gvrAudioEngine);
-        zombie.updateModelPosition(gvrAudioEngine);
+        // First rotate in XZ plane, between 90 and 270 deg away, and scale so that we vary
+        // the object's distance from the user.
+        float angleXZ = (float) (Math.random() * 2 * Math.PI);
+        float angleY = (float) 0; // Angle in Y plane, between -40 and 40.
+        angleY = (float) Math.toRadians(angleY);
+
+        float newX = (float) Math.cos(angleXZ) * MAX_MODEL_DISTANCE;
+        float newY = (float) Math.tan(angleY) * MAX_MODEL_DISTANCE;
+        float newZ = (float) Math.sin(angleXZ) * MAX_MODEL_DISTANCE;
+
+        float[] modelPosition = new float[]{newX, newY, newZ};
+        zombie = new Zombie(modelPosition, gvrAudioEngine, 0.1f);
     }
 
     /**

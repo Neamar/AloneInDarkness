@@ -15,10 +15,11 @@ public class Zombie {
 
     public float[] modelCube;
     public float[] modelPosition;
+    public float speed;
 
     private int zombieSoundId = GvrAudioEngine.INVALID_ID;
 
-    public Zombie(final float[] modelPosition, final GvrAudioEngine gvrAudioEngine) {
+    public Zombie(final float[] modelPosition, final GvrAudioEngine gvrAudioEngine, float speed) {
         modelCube = new float[16];
         // Model first appears directly in front of user.
         this.modelPosition = modelPosition;
@@ -40,6 +41,8 @@ public class Zombie {
                     }
                 })
                 .start();
+
+        updateModelPosition(gvrAudioEngine);
     }
 
     public void drawZombie(ZombieLoader zombieLoader, float[] lightPosInEyeSpace, float[] modelView, float[] modelViewProjection, boolean isLookingAtObject) {
