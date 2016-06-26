@@ -74,7 +74,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private static final float MIN_MODEL_DISTANCE = 3.0f;
     private static final float MAX_MODEL_DISTANCE = 7.0f;
 
-    private static final String SOUND_FILE = "zombie_walk.wav";
+    private static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
+    private static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
 
     private final float[] lightPosInEyeSpace = new float[4];
 
@@ -122,7 +123,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private Vibrator vibrator;
 
     private GvrAudioEngine gvrAudioEngine;
-    private volatile int soundId = GvrAudioEngine.INVALID_ID;
+    private volatile int zombieSoundId = GvrAudioEngine.INVALID_ID;
+    private volatile int handgunSoundId = GvrAudioEngine.INVALID_ID;
 
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -343,13 +345,14 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                     @Override
                     public void run() {
                         // Start spatial audio playback of SOUND_FILE at the model postion. The returned
-                        //soundId handle is stored and allows for repositioning the sound object whenever
+                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
                         // the cube position changes.
-                        gvrAudioEngine.preloadSoundFile(SOUND_FILE);
-                        soundId = gvrAudioEngine.createSoundObject(SOUND_FILE);
+                        gvrAudioEngine.preloadSoundFile(ZOMBIE_SOUND_FILE);
+                        zombieSoundId = gvrAudioEngine.createSoundObject(ZOMBIE_SOUND_FILE);
+
                         gvrAudioEngine.setSoundObjectPosition(
-                                soundId, modelPosition[0], modelPosition[1], modelPosition[2]);
-                        gvrAudioEngine.playSound(soundId, true /* looped playback */);
+                                zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+                        gvrAudioEngine.playSound(zombieSoundId, true /* looped playback */);
                     }
                 })
                 .start();
@@ -367,9 +370,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Matrix.translateM(modelCube, 0, modelPosition[0], modelPosition[1], modelPosition[2]);
 
         // Update the sound location to match it with the new cube position.
-        if (soundId != GvrAudioEngine.INVALID_ID) {
+        if (zombieSoundId != GvrAudioEngine.INVALID_ID) {
             gvrAudioEngine.setSoundObjectPosition(
-                    soundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+                    zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
         }
         checkGLError("updateCubePosition");
     }
@@ -535,12 +538,25 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         if (isLookingAtObject()) {
             hideObject();
-            vibrator.vibrate(200);
+            vibrator.vibrate(250);
         }
-        else {
-            // Always give user feedback.
-            vibrator.vibrate(50);
-        }
+
+        // Avoid any delays during start-up due to decoding of sound files.
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        gvrAudioEngine.preloadSoundFile(HANDGUN_SOUND_FILE);
+                        handgunSoundId = gvrAudioEngine.createSoundObject(HANDGUN_SOUND_FILE);
+
+                        gvrAudioEngine.setSoundObjectPosition(
+                                handgunSoundId, 0, -floorDepth / 2, 0);
+                        gvrAudioEngine.playSound(handgunSoundId, false);
+                    }
+                })
+                .start();
+
+
     }
 
     /**
