@@ -40,6 +40,7 @@ import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
+import fr.neamar.aloneindarkness.entity.Zombie;
 import fr.neamar.aloneindarkness.layoutdata.WorldLayoutData;
 import fr.neamar.aloneindarkness.layoutdata.ZombieLayoutData;
 
@@ -52,35 +53,35 @@ import fr.neamar.aloneindarkness.layoutdata.ZombieLayoutData;
  * randomly reposition the cube.
  */
 public class DarknessActivity extends GvrActivity implements GvrView.StereoRenderer {
+    public static final String TAG = "DarknessActivity";
+
+    public static final float Z_NEAR = 0.1f;
+    public static final float Z_FAR = 100.0f;
+
+    public static final float CAMERA_Z = 0.01f;
+    public static final float TIME_DELTA = 0.3f;
+
+    public static final float YAW_LIMIT = 0.35f;
+
+    public static final int COORDS_PER_VERTEX = 3;
+
+    // We keep the light always position just above the user.
+    public static final float[] LIGHT_POS_IN_WORLD_SPACE = new float[]{0.0f, 2.0f, 0.0f, 1.0f};
+
+    // Convenience vector for extracting the position from a matrix via multiplication.
+    public static final float[] POS_MATRIX_MULTIPLY_VEC = {0, 0, 0, 1.0f};
+
+    public static final float MIN_MODEL_DISTANCE = 3.0f;
+    public static final float MAX_MODEL_DISTANCE = 7.0f;
+
+    public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
+    public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
+
+    private final float[] lightPosInEyeSpace = new float[4];
 
     protected float[] modelCube;
     protected float[] modelPosition;
 
-    private static final String TAG = "DarknessActivity";
-
-    private static final float Z_NEAR = 0.1f;
-    private static final float Z_FAR = 100.0f;
-
-    private static final float CAMERA_Z = 0.01f;
-    private static final float TIME_DELTA = 0.3f;
-
-    private static final float YAW_LIMIT = 0.35f;
-
-    private static final int COORDS_PER_VERTEX = 3;
-
-    // We keep the light always position just above the user.
-    private static final float[] LIGHT_POS_IN_WORLD_SPACE = new float[]{0.0f, 2.0f, 0.0f, 1.0f};
-
-    // Convenience vector for extracting the position from a matrix via multiplication.
-    private static final float[] POS_MATRIX_MULTIPLY_VEC = {0, 0, 0, 1.0f};
-
-    private static final float MIN_MODEL_DISTANCE = 3.0f;
-    private static final float MAX_MODEL_DISTANCE = 7.0f;
-
-    private static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
-    private static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
-
-    private final float[] lightPosInEyeSpace = new float[4];
 
     private FloatBuffer floorVertices;
     private FloatBuffer floorColors;
@@ -129,6 +130,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private volatile int zombieSoundId = GvrAudioEngine.INVALID_ID;
     private volatile int handgunSoundId = GvrAudioEngine.INVALID_ID;
 
+    private Zombie zombie;
+
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
      *
@@ -165,8 +168,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
      *
      * @param label Label to report in case of error.
      */
-    private static void checkGLError(String label) {
+    public static void checkGLError(String label) {
         int error;
+        //noinspection LoopStatementThatDoesntLoop
         while ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
             Log.e(TAG, label + ": glError " + error);
             throw new RuntimeException(label + ": glError " + error);
@@ -198,6 +202,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         // Initialize 3D audio engine.
         gvrAudioEngine = new GvrAudioEngine(this, GvrAudioEngine.RenderingMode.BINAURAL_HIGH_QUALITY);
+
+        zombie = new Zombie();
     }
 
     public void initializeGvrView() {
@@ -454,7 +460,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
         Matrix.multiplyMM(modelView, 0, view, 0, modelCube, 0);
         Matrix.multiplyMM(modelViewProjection, 0, perspective, 0, modelView, 0);
-        drawCube();
+        zombie.drawZombie(cubeProgram, cubeLightPosParam, lightPosInEyeSpace, cubeModelParam, modelCube, cubeModelViewParam, modelView, cubePositionParam, cubeVertices, cubeModelViewProjectionParam, modelViewProjection, cubeNormalParam, cubeNormals, cubeColorParam, isLookingAtObject() ? cubeFoundColors : cubeColors);
 
         // Set modelView for the floor, so we draw floor in the correct location
         Matrix.multiplyMM(modelView, 0, view, 0, modelFloor, 0);
@@ -464,43 +470,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     @Override
     public void onFinishFrame(Viewport viewport) {
-    }
-
-    /**
-     * Draw the cube.
-     * <p/>
-     * <p>We've set all of our transformation matrices. Now we simply pass them into the shader.
-     */
-    public void drawCube() {
-        GLES20.glUseProgram(cubeProgram);
-
-        GLES20.glUniform3fv(cubeLightPosParam, 1, lightPosInEyeSpace, 0);
-
-        // Set the Model in the shader, used to calculate lighting
-        GLES20.glUniformMatrix4fv(cubeModelParam, 1, false, modelCube, 0);
-
-        // Set the ModelView in the shader, used to calculate lighting
-        GLES20.glUniformMatrix4fv(cubeModelViewParam, 1, false, modelView, 0);
-
-        // Set the position of the cube
-        GLES20.glVertexAttribPointer(
-                cubePositionParam, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, 0, cubeVertices);
-
-        // Set the ModelViewProjection matrix in the shader.
-        GLES20.glUniformMatrix4fv(cubeModelViewProjectionParam, 1, false, modelViewProjection, 0);
-
-        // Set the normal positions of the cube, again for shading
-        GLES20.glVertexAttribPointer(cubeNormalParam, 3, GLES20.GL_FLOAT, false, 0, cubeNormals);
-        GLES20.glVertexAttribPointer(cubeColorParam, 4, GLES20.GL_FLOAT, false, 0,
-                isLookingAtObject() ? cubeFoundColors : cubeColors);
-
-        // Enable vertex arrays
-        GLES20.glEnableVertexAttribArray(cubePositionParam);
-        GLES20.glEnableVertexAttribArray(cubeNormalParam);
-        GLES20.glEnableVertexAttribArray(cubeColorParam);
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
-        checkGLError("Drawing cube");
     }
 
     /**
