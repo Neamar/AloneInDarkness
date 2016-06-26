@@ -2,13 +2,9 @@ package fr.neamar.aloneindarkness.entity;
 
 import android.opengl.GLES20;
 
-import java.nio.FloatBuffer;
-
 import fr.neamar.aloneindarkness.DarknessActivity;
 
-/**
- * Created by neamar on 26/06/16.
- */
+
 public class Zombie {
     public static String TAG = "Zombie";
 
@@ -16,7 +12,7 @@ public class Zombie {
 
     }
 
-    public void drawZombie(int cubeProgram, int cubeLightPosParam, float[] lightPosInEyeSpace, int cubeModelParam, float[] modelCube, int cubeModelViewParam, float[] modelView, int cubePositionParam, FloatBuffer cubeVertices, int cubeModelViewProjectionParam, float[] modelViewProjection, int cubeNormalParam, FloatBuffer cubeNormals, int cubeColorParam, FloatBuffer cubeColors) {
+    public void drawZombie(ZombieLoader zombieLoader, int cubeProgram, int cubeLightPosParam, float[] lightPosInEyeSpace, int cubeModelParam, float[] modelCube, int cubeModelViewParam, float[] modelView, int cubePositionParam, int cubeModelViewProjectionParam, float[] modelViewProjection, int cubeNormalParam, int cubeColorParam, boolean isLookingAtObject) {
         GLES20.glUseProgram(cubeProgram);
 
         GLES20.glUniform3fv(cubeLightPosParam, 1, lightPosInEyeSpace, 0);
@@ -29,15 +25,15 @@ public class Zombie {
 
         // Set the position of the cube
         GLES20.glVertexAttribPointer(
-                cubePositionParam, DarknessActivity.COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, 0, cubeVertices);
+                cubePositionParam, DarknessActivity.COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, 0, zombieLoader.cubeVertices);
 
         // Set the ModelViewProjection matrix in the shader.
         GLES20.glUniformMatrix4fv(cubeModelViewProjectionParam, 1, false, modelViewProjection, 0);
 
         // Set the normal positions of the cube, again for shading
-        GLES20.glVertexAttribPointer(cubeNormalParam, 3, GLES20.GL_FLOAT, false, 0, cubeNormals);
+        GLES20.glVertexAttribPointer(cubeNormalParam, 3, GLES20.GL_FLOAT, false, 0, zombieLoader.cubeNormals);
         GLES20.glVertexAttribPointer(cubeColorParam, 4, GLES20.GL_FLOAT, false, 0,
-                cubeColors);
+                isLookingAtObject ? zombieLoader.cubeFoundColors : zombieLoader.cubeColors);
 
         // Enable vertex arrays
         GLES20.glEnableVertexAttribArray(cubePositionParam);

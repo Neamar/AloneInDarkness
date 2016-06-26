@@ -41,8 +41,8 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 
 import fr.neamar.aloneindarkness.entity.Zombie;
+import fr.neamar.aloneindarkness.entity.ZombieLoader;
 import fr.neamar.aloneindarkness.layoutdata.WorldLayoutData;
-import fr.neamar.aloneindarkness.layoutdata.ZombieLayoutData;
 
 /**
  * A Google VR sample application.
@@ -87,11 +87,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private FloatBuffer floorColors;
     private FloatBuffer floorNormals;
 
-    private FloatBuffer cubeVertices;
-    private FloatBuffer cubeColors;
-    private FloatBuffer cubeFoundColors;
-    private FloatBuffer cubeNormals;
-
     private int cubeProgram;
     private int floorProgram;
 
@@ -130,6 +125,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private volatile int zombieSoundId = GvrAudioEngine.INVALID_ID;
     private volatile int handgunSoundId = GvrAudioEngine.INVALID_ID;
 
+    private ZombieLoader zombieLoader;
     private Zombie zombie;
 
     /**
@@ -203,6 +199,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         // Initialize 3D audio engine.
         gvrAudioEngine = new GvrAudioEngine(this, GvrAudioEngine.RenderingMode.BINAURAL_HIGH_QUALITY);
 
+        zombieLoader = new ZombieLoader();
         zombie = new Zombie();
     }
 
@@ -259,30 +256,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Log.i(TAG, "onSurfaceCreated");
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 0.5f); // Dark background so text shows up well.
 
-        ByteBuffer bbVertices = ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_COORDS.length * 4);
-        bbVertices.order(ByteOrder.nativeOrder());
-        cubeVertices = bbVertices.asFloatBuffer();
-        cubeVertices.put(ZombieLayoutData.CUBE_COORDS);
-        cubeVertices.position(0);
-
-        ByteBuffer bbColors = ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_COLORS.length * 4);
-        bbColors.order(ByteOrder.nativeOrder());
-        cubeColors = bbColors.asFloatBuffer();
-        cubeColors.put(ZombieLayoutData.CUBE_COLORS);
-        cubeColors.position(0);
-
-        ByteBuffer bbFoundColors =
-                ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_FOUND_COLORS.length * 4);
-        bbFoundColors.order(ByteOrder.nativeOrder());
-        cubeFoundColors = bbFoundColors.asFloatBuffer();
-        cubeFoundColors.put(ZombieLayoutData.CUBE_FOUND_COLORS);
-        cubeFoundColors.position(0);
-
-        ByteBuffer bbNormals = ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_NORMALS.length * 4);
-        bbNormals.order(ByteOrder.nativeOrder());
-        cubeNormals = bbNormals.asFloatBuffer();
-        cubeNormals.put(ZombieLayoutData.CUBE_NORMALS);
-        cubeNormals.position(0);
+        zombieLoader.onSurfaceCreated(config);
 
         // make a floor
         ByteBuffer bbFloorVertices = ByteBuffer.allocateDirect(WorldLayoutData.FLOOR_COORDS.length * 4);
@@ -460,7 +434,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
         Matrix.multiplyMM(modelView, 0, view, 0, modelCube, 0);
         Matrix.multiplyMM(modelViewProjection, 0, perspective, 0, modelView, 0);
-        zombie.drawZombie(cubeProgram, cubeLightPosParam, lightPosInEyeSpace, cubeModelParam, modelCube, cubeModelViewParam, modelView, cubePositionParam, cubeVertices, cubeModelViewProjectionParam, modelViewProjection, cubeNormalParam, cubeNormals, cubeColorParam, isLookingAtObject() ? cubeFoundColors : cubeColors);
+        zombie.drawZombie(zombieLoader, cubeProgram, cubeLightPosParam, lightPosInEyeSpace, cubeModelParam, modelCube, cubeModelViewParam, modelView, cubePositionParam, cubeModelViewProjectionParam, modelViewProjection, cubeNormalParam, cubeColorParam, isLookingAtObject());
 
         // Set modelView for the floor, so we draw floor in the correct location
         Matrix.multiplyMM(modelView, 0, view, 0, modelFloor, 0);
