@@ -79,10 +79,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     private final float[] lightPosInEyeSpace = new float[4];
 
-    protected float[] modelCube;
-    protected float[] modelPosition;
-
-
     private FloatBuffer floorVertices;
     private FloatBuffer floorColors;
     private FloatBuffer floorNormals;
@@ -183,15 +179,12 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         initializeGvrView();
 
-        modelCube = new float[16];
         camera = new float[16];
         view = new float[16];
         modelViewProjection = new float[16];
         modelView = new float[16];
         modelFloor = new float[16];
         tempPosition = new float[4];
-        // Model first appears directly in front of user.
-        modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
         headRotation = new float[4];
         headView = new float[16];
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -200,7 +193,11 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         gvrAudioEngine = new GvrAudioEngine(this, GvrAudioEngine.RenderingMode.BINAURAL_HIGH_QUALITY);
 
         zombieLoader = new ZombieLoader();
-        zombie = new Zombie();
+
+        // Model first appears directly in front of user.
+        float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
+
+        zombie = new Zombie(modelPosition);
     }
 
     public void initializeGvrView() {
@@ -334,7 +331,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                         zombieSoundId = gvrAudioEngine.createSoundObject(ZOMBIE_SOUND_FILE);
 
                         gvrAudioEngine.setSoundObjectPosition(
-                                zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+                                zombieSoundId, zombie.modelPosition[0], zombie.modelPosition[1], zombie.modelPosition[2]);
                         gvrAudioEngine.playSound(zombieSoundId, true /* looped playback */);
                     }
                 })
@@ -349,13 +346,13 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
      * Updates the cube model position.
      */
     protected void updateModelPosition() {
-        Matrix.setIdentityM(modelCube, 0);
-        Matrix.translateM(modelCube, 0, modelPosition[0], modelPosition[1], modelPosition[2]);
+        Matrix.setIdentityM(zombie.modelCube, 0);
+        Matrix.translateM(zombie.modelCube, 0, zombie.modelPosition[0], zombie.modelPosition[1], zombie.modelPosition[2]);
 
         // Update the sound location to match it with the new cube position.
         if (zombieSoundId != GvrAudioEngine.INVALID_ID) {
             gvrAudioEngine.setSoundObjectPosition(
-                    zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+                    zombieSoundId, zombie.modelPosition[0], zombie.modelPosition[1], zombie.modelPosition[2]);
         }
         checkGLError("updateCubePosition");
     }
@@ -408,7 +405,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     }
 
     protected void setCubeRotation() {
-        Matrix.rotateM(modelCube, 0, TIME_DELTA, 0.5f, 0.5f, 1.0f);
+        Matrix.rotateM(zombie.modelCube, 0, TIME_DELTA, 0.5f, 0.5f, 1.0f);
     }
 
     /**
@@ -432,9 +429,10 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         // Build the ModelView and ModelViewProjection matrices
         // for calculating cube position and light.
         float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
-        Matrix.multiplyMM(modelView, 0, view, 0, modelCube, 0);
+        Matrix.multiplyMM(modelView, 0, view, 0, zombie.modelCube, 0);
         Matrix.multiplyMM(modelViewProjection, 0, perspective, 0, modelView, 0);
-        zombie.drawZombie(zombieLoader, cubeProgram, cubeLightPosParam, lightPosInEyeSpace, cubeModelParam, modelCube, cubeModelViewParam, modelView, cubePositionParam, cubeModelViewProjectionParam, modelViewProjection, cubeNormalParam, cubeColorParam, isLookingAtObject());
+
+        zombie.drawZombie(zombieLoader, cubeProgram, cubeLightPosParam, lightPosInEyeSpace, cubeModelParam, cubeModelViewParam, modelView, cubePositionParam, cubeModelViewProjectionParam, modelViewProjection, cubeNormalParam, cubeColorParam, isLookingAtObject());
 
         // Set modelView for the floor, so we draw floor in the correct location
         Matrix.multiplyMM(modelView, 0, view, 0, modelFloor, 0);
@@ -523,15 +521,15 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                 (float) Math.random() * (MAX_MODEL_DISTANCE - MIN_MODEL_DISTANCE) + MIN_MODEL_DISTANCE;
         float objectScalingFactor = objectDistance / oldObjectDistance;
         Matrix.scaleM(rotationMatrix, 0, objectScalingFactor, objectScalingFactor, objectScalingFactor);
-        Matrix.multiplyMV(posVec, 0, rotationMatrix, 0, modelCube, 12);
+        Matrix.multiplyMV(posVec, 0, rotationMatrix, 0, zombie.modelCube, 12);
 
         float angleY = (float) 0; // Angle in Y plane, between -40 and 40.
         angleY = (float) Math.toRadians(angleY);
         float newY = (float) Math.tan(angleY) * objectDistance;
 
-        modelPosition[0] = posVec[0];
-        modelPosition[1] = newY;
-        modelPosition[2] = posVec[2];
+        zombie.modelPosition[0] = posVec[0];
+        zombie.modelPosition[1] = newY;
+        zombie.modelPosition[2] = posVec[2];
 
         updateModelPosition();
     }
@@ -543,7 +541,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
      */
     private boolean isLookingAtObject() {
         // Convert object space to camera space. Use the headView from onNewFrame.
-        Matrix.multiplyMM(modelView, 0, headView, 0, modelCube, 0);
+        Matrix.multiplyMM(modelView, 0, headView, 0, zombie.modelCube, 0);
         Matrix.multiplyMV(tempPosition, 0, modelView, 0, POS_MATRIX_MULTIPLY_VEC, 0);
 
         float yaw = (float) Math.atan2(tempPosition[0], -tempPosition[2]);

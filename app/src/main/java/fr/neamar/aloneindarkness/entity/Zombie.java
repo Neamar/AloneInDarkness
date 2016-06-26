@@ -8,11 +8,16 @@ import fr.neamar.aloneindarkness.DarknessActivity;
 public class Zombie {
     public static String TAG = "Zombie";
 
-    public Zombie() {
+    public float[] modelCube;
+    public float[] modelPosition;
 
+    public Zombie(float[] modelPosition) {
+        modelCube = new float[16];
+        // Model first appears directly in front of user.
+        this.modelPosition = modelPosition;
     }
 
-    public void drawZombie(ZombieLoader zombieLoader, int cubeProgram, int cubeLightPosParam, float[] lightPosInEyeSpace, int cubeModelParam, float[] modelCube, int cubeModelViewParam, float[] modelView, int cubePositionParam, int cubeModelViewProjectionParam, float[] modelViewProjection, int cubeNormalParam, int cubeColorParam, boolean isLookingAtObject) {
+    public void drawZombie(ZombieLoader zombieLoader, int cubeProgram, int cubeLightPosParam, float[] lightPosInEyeSpace, int cubeModelParam, int cubeModelViewParam, float[] modelView, int cubePositionParam, int cubeModelViewProjectionParam, float[] modelViewProjection, int cubeNormalParam, int cubeColorParam, boolean isLookingAtObject) {
         GLES20.glUseProgram(cubeProgram);
 
         GLES20.glUniform3fv(cubeLightPosParam, 1, lightPosInEyeSpace, 0);
