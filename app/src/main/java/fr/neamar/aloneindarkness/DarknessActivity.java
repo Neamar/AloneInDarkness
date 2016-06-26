@@ -83,16 +83,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private FloatBuffer floorColors;
     private FloatBuffer floorNormals;
 
-    private int cubeProgram;
     private int floorProgram;
-
-    private int cubePositionParam;
-    private int cubeNormalParam;
-    private int cubeColorParam;
-    private int cubeModelParam;
-    private int cubeModelViewParam;
-    private int cubeModelViewProjectionParam;
-    private int cubeLightPosParam;
 
     private int floorPositionParam;
     private int floorNormalParam;
@@ -253,8 +244,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Log.i(TAG, "onSurfaceCreated");
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 0.5f); // Dark background so text shows up well.
 
-        zombieLoader.onSurfaceCreated(config);
-
         // make a floor
         ByteBuffer bbFloorVertices = ByteBuffer.allocateDirect(WorldLayoutData.FLOOR_COORDS.length * 4);
         bbFloorVertices.order(ByteOrder.nativeOrder());
@@ -278,22 +267,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         int gridShader = loadGLShader(GLES20.GL_FRAGMENT_SHADER, R.raw.grid_fragment);
         int passthroughShader = loadGLShader(GLES20.GL_FRAGMENT_SHADER, R.raw.passthrough_fragment);
 
-        cubeProgram = GLES20.glCreateProgram();
-        GLES20.glAttachShader(cubeProgram, vertexShader);
-        GLES20.glAttachShader(cubeProgram, passthroughShader);
-        GLES20.glLinkProgram(cubeProgram);
-        GLES20.glUseProgram(cubeProgram);
-
-        checkGLError("Cube program");
-
-        cubePositionParam = GLES20.glGetAttribLocation(cubeProgram, "a_Position");
-        cubeNormalParam = GLES20.glGetAttribLocation(cubeProgram, "a_Normal");
-        cubeColorParam = GLES20.glGetAttribLocation(cubeProgram, "a_Color");
-
-        cubeModelParam = GLES20.glGetUniformLocation(cubeProgram, "u_Model");
-        cubeModelViewParam = GLES20.glGetUniformLocation(cubeProgram, "u_MVMatrix");
-        cubeModelViewProjectionParam = GLES20.glGetUniformLocation(cubeProgram, "u_MVP");
-        cubeLightPosParam = GLES20.glGetUniformLocation(cubeProgram, "u_LightPos");
+        zombieLoader.onSurfaceCreated(config, vertexShader, passthroughShader);
 
         checkGLError("Cube program params");
 
@@ -432,7 +406,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Matrix.multiplyMM(modelView, 0, view, 0, zombie.modelCube, 0);
         Matrix.multiplyMM(modelViewProjection, 0, perspective, 0, modelView, 0);
 
-        zombie.drawZombie(zombieLoader, cubeProgram, cubeLightPosParam, lightPosInEyeSpace, cubeModelParam, cubeModelViewParam, modelView, cubePositionParam, cubeModelViewProjectionParam, modelViewProjection, cubeNormalParam, cubeColorParam, isLookingAtObject());
+        zombie.drawZombie(zombieLoader, lightPosInEyeSpace, modelView, modelViewProjection, isLookingAtObject());
 
         // Set modelView for the floor, so we draw floor in the correct location
         Matrix.multiplyMM(modelView, 0, view, 0, modelFloor, 0);
