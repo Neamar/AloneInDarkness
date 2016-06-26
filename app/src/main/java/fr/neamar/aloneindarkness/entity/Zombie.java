@@ -12,6 +12,8 @@ public class Zombie {
     public static String TAG = "Zombie";
     public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
     public static final String ZOMBIE_DEATH_SOUND_FILE = "zombie_death.wav";
+    public static final float ROTATION_SPEED = 0.3f;
+
 
     public float[] modelCube;
     public float[] modelPosition;
@@ -23,6 +25,8 @@ public class Zombie {
         modelCube = new float[16];
         // Model first appears directly in front of user.
         this.modelPosition = modelPosition;
+
+        this.speed = speed;
 
         // Avoid any delays during start-up due to decoding of sound files.
         new Thread(
@@ -43,6 +47,28 @@ public class Zombie {
                 .start();
 
         updateModelPosition(gvrAudioEngine);
+    }
+
+    public boolean onNewFrame(final GvrAudioEngine gvrAudioEngine) {
+        Matrix.rotateM(modelCube, 0, ROTATION_SPEED, 0.5f, 0.5f, 1.0f);
+
+        double angleXZ = Math.atan2(modelPosition[2], modelPosition[0]);
+        double distance = Math.sqrt(Math.pow(modelPosition[0], 2) + Math.pow(modelPosition[2], 2));
+
+        double newDistance = distance - speed;
+
+        if(newDistance < 2) {
+            gvrAudioEngine.stopSound(zombieSoundId);
+            return true;
+        }
+        else {
+            modelPosition[0] = (float) (Math.cos(angleXZ) * newDistance);
+            modelPosition[2] = (float) (Math.sin(angleXZ) * newDistance);
+
+            updateModelPosition(gvrAudioEngine);
+
+            return false;
+        }
     }
 
     public void drawZombie(ZombieLoader zombieLoader, float[] lightPosInEyeSpace, float[] modelView, float[] modelViewProjection, boolean isLookingAtObject) {

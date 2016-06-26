@@ -51,7 +51,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final float Z_FAR = 100.0f;
 
     public static final float CAMERA_Z = 0.01f;
-    public static final float TIME_DELTA = 0.3f;
 
     public static final float YAW_LIMIT = 0.35f;
 
@@ -67,6 +66,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final float MAX_MODEL_DISTANCE = 7.0f;
 
     public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
+    public static final String PLAYER_DEATH_SOUND_FILE = "player_dead.wav";
 
     private final float[] lightPosInEyeSpace = new float[4];
 
@@ -103,6 +103,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     private ZombieLoader zombieLoader;
     private Zombie zombie;
+
+    private Boolean playerIsDead = false;
 
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -177,7 +179,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         // Model first appears directly in front of user.
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
-        zombie = new Zombie(modelPosition, gvrAudioEngine, 0.1f);
+        zombie = new Zombie(modelPosition, gvrAudioEngine, 0f);
     }
 
     public void initializeGvrView() {
@@ -318,7 +320,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
      */
     @Override
     public void onNewFrame(HeadTransform headTransform) {
-        setCubeRotation();
+        if(playerIsDead) {
+            return;
+        }
 
         // Build the camera matrix and apply it to the ModelView.
         Matrix.setLookAtM(camera, 0, 0.0f, 0.0f, CAMERA_Z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
@@ -333,10 +337,33 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         gvrAudioEngine.update();
 
         checkGLError("onReadyToDraw");
+
+        boolean isPlayerDead = zombie.onNewFrame(gvrAudioEngine);
+
+        if(isPlayerDead) {
+            onPlayerDead(zombie);
+        }
     }
 
-    protected void setCubeRotation() {
-        Matrix.rotateM(zombie.modelCube, 0, TIME_DELTA, 0.5f, 0.5f, 1.0f);
+    protected void onPlayerDead(final Zombie killingZombie) {
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        // Start spatial audio playback of SOUND_FILE at the model postion. The returned
+                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
+                        // the cube position changes.
+                        gvrAudioEngine.preloadSoundFile(PLAYER_DEATH_SOUND_FILE);
+                        int deathSound = gvrAudioEngine.createSoundObject(PLAYER_DEATH_SOUND_FILE);
+
+                        gvrAudioEngine.setSoundObjectPosition(
+                                deathSound, killingZombie.modelPosition[0], killingZombie.modelPosition[1], killingZombie.modelPosition[2]);
+                        gvrAudioEngine.playSound(deathSound, false);
+                    }
+                })
+                .start();
+
+        playerIsDead = true;
     }
 
     /**
@@ -450,7 +477,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float newZ = (float) Math.sin(angleXZ) * MAX_MODEL_DISTANCE;
 
         float[] modelPosition = new float[]{newX, newY, newZ};
-        zombie = new Zombie(modelPosition, gvrAudioEngine, 0.1f);
+        zombie = new Zombie(modelPosition, gvrAudioEngine, 0.007f);
     }
 
     /**
