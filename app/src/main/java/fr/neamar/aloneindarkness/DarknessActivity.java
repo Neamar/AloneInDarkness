@@ -48,12 +48,12 @@ import javax.microedition.khronos.egl.EGLConfig;
  * While gold, the user can activate the Carboard trigger, which will in turn
  * randomly reposition the cube.
  */
-public class TreasureHuntActivity extends GvrActivity implements GvrView.StereoRenderer {
+public class DarknessActivity extends GvrActivity implements GvrView.StereoRenderer {
 
   protected float[] modelCube;
   protected float[] modelPosition;
 
-  private static final String TAG = "TreasureHuntActivity";
+  private static final String TAG = "DarknessActivity";
 
   private static final float Z_NEAR = 0.1f;
   private static final float Z_FAR = 100.0f;
