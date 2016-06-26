@@ -61,8 +61,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private static final float CAMERA_Z = 0.01f;
     private static final float TIME_DELTA = 0.3f;
 
-    private static final float YAW_LIMIT = 0.12f;
-    private static final float PITCH_LIMIT = 0.12f;
+    private static final float YAW_LIMIT = 0.25f;
 
     private static final int COORDS_PER_VERTEX = 3;
 
@@ -583,9 +582,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Matrix.multiplyMM(modelView, 0, headView, 0, modelCube, 0);
         Matrix.multiplyMV(tempPosition, 0, modelView, 0, POS_MATRIX_MULTIPLY_VEC, 0);
 
-        float pitch = (float) Math.atan2(tempPosition[1], -tempPosition[2]);
         float yaw = (float) Math.atan2(tempPosition[0], -tempPosition[2]);
 
-        return Math.abs(pitch) < PITCH_LIMIT && Math.abs(yaw) < YAW_LIMIT;
+        return Math.abs(yaw) < YAW_LIMIT;
     }
 }
