@@ -40,6 +40,9 @@ import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
+import fr.neamar.aloneindarkness.layoutdata.WorldLayoutData;
+import fr.neamar.aloneindarkness.layoutdata.ZombieLayoutData;
+
 /**
  * A Google VR sample application.
  * </p><p>
@@ -250,29 +253,29 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Log.i(TAG, "onSurfaceCreated");
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 0.5f); // Dark background so text shows up well.
 
-        ByteBuffer bbVertices = ByteBuffer.allocateDirect(WorldLayoutData.CUBE_COORDS.length * 4);
+        ByteBuffer bbVertices = ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_COORDS.length * 4);
         bbVertices.order(ByteOrder.nativeOrder());
         cubeVertices = bbVertices.asFloatBuffer();
-        cubeVertices.put(WorldLayoutData.CUBE_COORDS);
+        cubeVertices.put(ZombieLayoutData.CUBE_COORDS);
         cubeVertices.position(0);
 
-        ByteBuffer bbColors = ByteBuffer.allocateDirect(WorldLayoutData.CUBE_COLORS.length * 4);
+        ByteBuffer bbColors = ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_COLORS.length * 4);
         bbColors.order(ByteOrder.nativeOrder());
         cubeColors = bbColors.asFloatBuffer();
-        cubeColors.put(WorldLayoutData.CUBE_COLORS);
+        cubeColors.put(ZombieLayoutData.CUBE_COLORS);
         cubeColors.position(0);
 
         ByteBuffer bbFoundColors =
-                ByteBuffer.allocateDirect(WorldLayoutData.CUBE_FOUND_COLORS.length * 4);
+                ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_FOUND_COLORS.length * 4);
         bbFoundColors.order(ByteOrder.nativeOrder());
         cubeFoundColors = bbFoundColors.asFloatBuffer();
-        cubeFoundColors.put(WorldLayoutData.CUBE_FOUND_COLORS);
+        cubeFoundColors.put(ZombieLayoutData.CUBE_FOUND_COLORS);
         cubeFoundColors.position(0);
 
-        ByteBuffer bbNormals = ByteBuffer.allocateDirect(WorldLayoutData.CUBE_NORMALS.length * 4);
+        ByteBuffer bbNormals = ByteBuffer.allocateDirect(ZombieLayoutData.CUBE_NORMALS.length * 4);
         bbNormals.order(ByteOrder.nativeOrder());
         cubeNormals = bbNormals.asFloatBuffer();
-        cubeNormals.put(WorldLayoutData.CUBE_NORMALS);
+        cubeNormals.put(ZombieLayoutData.CUBE_NORMALS);
         cubeNormals.position(0);
 
         // make a floor
