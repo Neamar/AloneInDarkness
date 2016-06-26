@@ -1,20 +1,46 @@
 package fr.neamar.aloneindarkness.entity;
 
 import android.opengl.GLES20;
+import android.opengl.Matrix;
+
+import com.google.vr.sdk.audio.GvrAudioEngine;
 
 import fr.neamar.aloneindarkness.DarknessActivity;
 
 
 public class Zombie {
     public static String TAG = "Zombie";
+    public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
 
     public float[] modelCube;
     public float[] modelPosition;
 
-    public Zombie(float[] modelPosition) {
+    private int zombieSoundId = GvrAudioEngine.INVALID_ID;
+    ;
+
+    public Zombie(final float[] modelPosition, final GvrAudioEngine gvrAudioEngine) {
         modelCube = new float[16];
         // Model first appears directly in front of user.
         this.modelPosition = modelPosition;
+
+
+        // Avoid any delays during start-up due to decoding of sound files.
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        // Start spatial audio playback of SOUND_FILE at the model postion. The returned
+                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
+                        // the cube position changes.
+                        gvrAudioEngine.preloadSoundFile(ZOMBIE_SOUND_FILE);
+                        zombieSoundId = gvrAudioEngine.createSoundObject(ZOMBIE_SOUND_FILE);
+
+                        gvrAudioEngine.setSoundObjectPosition(
+                                zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+                        gvrAudioEngine.playSound(zombieSoundId, true /* looped playback */);
+                    }
+                })
+                .start();
     }
 
     public void drawZombie(ZombieLoader zombieLoader, float[] lightPosInEyeSpace, float[] modelView, float[] modelViewProjection, boolean isLookingAtObject) {
@@ -47,5 +73,21 @@ public class Zombie {
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
         DarknessActivity.checkGLError("Drawing cube");
+    }
+
+    /**
+     * Updates the cube model position.
+     */
+    public void updateModelPosition(GvrAudioEngine gvrAudioEngine) {
+        Matrix.setIdentityM(modelCube, 0);
+        Matrix.translateM(modelCube, 0, modelPosition[0], modelPosition[1], modelPosition[2]);
+
+        // Update the sound location to match it with the new cube position.
+        if (zombieSoundId != GvrAudioEngine.INVALID_ID) {
+            gvrAudioEngine.setSoundObjectPosition(
+                    zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+        }
+
+        DarknessActivity.checkGLError("updateCubePosition");
     }
 }

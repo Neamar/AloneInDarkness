@@ -74,7 +74,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final float MIN_MODEL_DISTANCE = 3.0f;
     public static final float MAX_MODEL_DISTANCE = 7.0f;
 
-    public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
     public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
 
     private final float[] lightPosInEyeSpace = new float[4];
@@ -109,7 +108,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private Vibrator vibrator;
 
     private GvrAudioEngine gvrAudioEngine;
-    private volatile int zombieSoundId = GvrAudioEngine.INVALID_ID;
     private volatile int handgunSoundId = GvrAudioEngine.INVALID_ID;
 
     private ZombieLoader zombieLoader;
@@ -188,7 +186,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         // Model first appears directly in front of user.
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
-        zombie = new Zombie(modelPosition);
+        zombie = new Zombie(modelPosition, gvrAudioEngine);
     }
 
     public void initializeGvrView() {
@@ -293,43 +291,11 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Matrix.setIdentityM(modelFloor, 0);
         Matrix.translateM(modelFloor, 0, 0, -floorDepth, 0); // Floor appears below user.
 
-        // Avoid any delays during start-up due to decoding of sound files.
-        new Thread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        // Start spatial audio playback of SOUND_FILE at the model postion. The returned
-                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
-                        // the cube position changes.
-                        gvrAudioEngine.preloadSoundFile(ZOMBIE_SOUND_FILE);
-                        zombieSoundId = gvrAudioEngine.createSoundObject(ZOMBIE_SOUND_FILE);
-
-                        gvrAudioEngine.setSoundObjectPosition(
-                                zombieSoundId, zombie.modelPosition[0], zombie.modelPosition[1], zombie.modelPosition[2]);
-                        gvrAudioEngine.playSound(zombieSoundId, true /* looped playback */);
-                    }
-                })
-                .start();
-
-        updateModelPosition();
+        zombie.updateModelPosition(gvrAudioEngine);
 
         checkGLError("onSurfaceCreated");
     }
 
-    /**
-     * Updates the cube model position.
-     */
-    protected void updateModelPosition() {
-        Matrix.setIdentityM(zombie.modelCube, 0);
-        Matrix.translateM(zombie.modelCube, 0, zombie.modelPosition[0], zombie.modelPosition[1], zombie.modelPosition[2]);
-
-        // Update the sound location to match it with the new cube position.
-        if (zombieSoundId != GvrAudioEngine.INVALID_ID) {
-            gvrAudioEngine.setSoundObjectPosition(
-                    zombieSoundId, zombie.modelPosition[0], zombie.modelPosition[1], zombie.modelPosition[2]);
-        }
-        checkGLError("updateCubePosition");
-    }
 
     /**
      * Converts a raw text file into a string.
@@ -505,7 +471,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         zombie.modelPosition[1] = newY;
         zombie.modelPosition[2] = posVec[2];
 
-        updateModelPosition();
+        zombie.updateModelPosition(gvrAudioEngine);
     }
 
     /**
