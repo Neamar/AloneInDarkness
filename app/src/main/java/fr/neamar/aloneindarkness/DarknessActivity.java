@@ -71,10 +71,11 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final float MIN_MODEL_DISTANCE = 3.0f;
     public static final float MAX_MODEL_DISTANCE = 7.0f;
 
-    public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
-    public static final String PLAYER_DEATH_SOUND_FILE = "player_dead.wav";
-    public static final String BREATHING_SOUND_FILE = "human-breath.wav";
-    public static final String SHELL_CASING_SOUND_FILE = "shell-casing-drop.wav";
+    public static final String HANDGUN_SOUND_FILE = "handgun/shot.wav";
+    public static final String PLAYER_DEATH_SOUND_FILE = "player/death.wav";
+    public static final String BREATHING_SOUND_FILE = "player/breath.wav";
+    public static final String SHELL_CASING_SOUND_FILE = "handgun/shell-casing-drop.wav";
+    public static final String RELOAD_SOUND_FILE = "handgun/reload-case-1.wav";
 
     private final float[] lightPosInEyeSpace = new float[4];
 
@@ -112,6 +113,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private ZombieLoader zombieLoader;
     private Zombie zombie;
     private int bulletsLeft = 6;
+    private int maxBullets = 6;
+    private int reloadingSoundId = GvrAudioEngine.INVALID_ID;
+
 
     private Boolean playerIsDead = false;
 
@@ -344,6 +348,12 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
             return;
         }
 
+        if(reloadingSoundId != GvrAudioEngine.INVALID_ID && !gvrAudioEngine.isSoundPlaying(reloadingSoundId)) {
+            reloadingSoundId = GvrAudioEngine.INVALID_ID;
+            bulletsLeft++;
+            Log.i(TAG, "Reloaded. Ammo in magazine:" + bulletsLeft);
+        }
+
         // Build the camera matrix and apply it to the ModelView.
         Matrix.setLookAtM(camera, 0, 0.0f, 0.0f, CAMERA_Z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
@@ -369,6 +379,23 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Matrix.multiplyMV(tempPosition, 0, modelView, 0, POS_MATRIX_MULTIPLY_VEC, 0);
 
         float pitch = (float) Math.atan2(tempPosition[1], -tempPosition[2]);
+
+        if(pitch > PITCH_LIMIT && reloadingSoundId == GvrAudioEngine.INVALID_ID && bulletsLeft < maxBullets) {
+            Log.e(TAG, "Starting reload");
+            new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            gvrAudioEngine.preloadSoundFile(RELOAD_SOUND_FILE);
+                            reloadingSoundId = gvrAudioEngine.createSoundObject(RELOAD_SOUND_FILE);
+
+                            gvrAudioEngine.setSoundObjectPosition(
+                                    reloadingSoundId,0, -floorDepth / 2, 0);
+                            gvrAudioEngine.playSound(reloadingSoundId, false);
+                        }
+                    })
+                    .start();
+        }
     }
 
     protected void onPlayerDead(final Zombie killingZombie) {
@@ -376,9 +403,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                 new Runnable() {
                     @Override
                     public void run() {
-                        // Start spatial audio playback of SOUND_FILE at the model postion. The returned
-                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
-                        // the cube position changes.
                         gvrAudioEngine.preloadSoundFile(PLAYER_DEATH_SOUND_FILE);
                         int deathSound = gvrAudioEngine.createSoundObject(PLAYER_DEATH_SOUND_FILE);
 
@@ -465,12 +489,21 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         Log.i(TAG, "onCardboardTrigger");
 
         if (bulletsLeft <= 0) {
+            Log.i(TAG, "Out of ammmo.");
             return;
         }
 
-        // bulletsLeft--;
+        if(reloadingSoundId != GvrAudioEngine.INVALID_ID) {
+            Log.i(TAG, "Is reloading");
+        }
+
+        bulletsLeft--;
+
+        Log.i(TAG, "Shooting. Bullets left:" + bulletsLeft);
+
 
         if (isLookingAtObject()) {
+            Log.i(TAG, "Killing zombie");
             hideObject();
             vibrator.vibrate(250);
         }
