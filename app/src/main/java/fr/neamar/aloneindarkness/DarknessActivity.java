@@ -176,7 +176,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         zombieLoader = new ZombieLoader();
 
-        // Model first appears directly in front of user.
+        // First zombie appears directly in front of user.
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0f);

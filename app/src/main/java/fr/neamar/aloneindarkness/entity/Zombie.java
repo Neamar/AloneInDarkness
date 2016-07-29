@@ -23,7 +23,6 @@ public class Zombie {
 
     public Zombie(final float[] modelPosition, final GvrAudioEngine gvrAudioEngine, float speed) {
         modelCube = new float[16];
-        // Model first appears directly in front of user.
         this.modelPosition = modelPosition;
 
         this.speed = speed;
@@ -35,7 +34,7 @@ public class Zombie {
                     public void run() {
                         // Start spatial audio playback of SOUND_FILE at the model postion. The returned
                         //zombieSoundId handle is stored and allows for repositioning the sound object whenever
-                        // the cube position changes.
+                        // the position changes.
                         gvrAudioEngine.preloadSoundFile(ZOMBIE_SOUND_FILE);
                         zombieSoundId = gvrAudioEngine.createSoundObject(ZOMBIE_SOUND_FILE);
 
