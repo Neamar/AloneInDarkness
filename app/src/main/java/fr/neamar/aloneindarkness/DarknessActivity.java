@@ -403,6 +403,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                 new Runnable() {
                     @Override
                     public void run() {
+                        vibrator.vibrate(new long[] {0L, 250L, 150L, 350L, 150L, 350L, 150L, 350L, 150L, 350L, 150L, 350L}, -1);
                         gvrAudioEngine.preloadSoundFile(PLAYER_DEATH_SOUND_FILE);
                         int deathSound = gvrAudioEngine.createSoundObject(PLAYER_DEATH_SOUND_FILE);
 
