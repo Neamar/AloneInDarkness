@@ -2,6 +2,7 @@ package fr.neamar.aloneindarkness.entity;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 import com.google.vr.sdk.audio.GvrAudioEngine;
 
@@ -12,7 +13,12 @@ import fr.neamar.aloneindarkness.DarknessActivity;
 
 public class Zombie {
     public static String TAG = "Zombie";
-    public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
+    public static final String[] ZOMBIE_BREATHING_SOUND_FILES = new String[] {
+            "zombies/breathing_1.wav",
+            "zombies/breathing_2.wav",
+            "zombies/breathing_3.wav",
+            "zombies/breathing_4.wav"
+    };
     public static final String[] ZOMBIE_DEATH_SOUND_FILES = new String[] {
             "zombies/death_1.wav",
             "zombies/death_2.wav",
@@ -32,6 +38,9 @@ public class Zombie {
     public float[] modelPosition;
     public float speed;
 
+    private float minZombieBreathingVolume = 0.3f;
+    private float maxZombieBreathingVolume = 0.9f;
+
     private int zombieSoundId = GvrAudioEngine.INVALID_ID;
 
     public Zombie(final float[] modelPosition, final GvrAudioEngine gvrAudioEngine, float speed) {
@@ -48,17 +57,43 @@ public class Zombie {
                         // Start spatial audio playback of SOUND_FILE at the model postion. The returned
                         //zombieSoundId handle is stored and allows for repositioning the sound object whenever
                         // the position changes.
-                        gvrAudioEngine.preloadSoundFile(ZOMBIE_SOUND_FILE);
-                        zombieSoundId = gvrAudioEngine.createSoundObject(ZOMBIE_SOUND_FILE);
+                        for (String soundFile: ZOMBIE_BREATHING_SOUND_FILES) {
+                            Log.i("BreathingSounds", String.format("Loading sound file, %s", soundFile));
+                            gvrAudioEngine.preloadSoundFile(soundFile);
+                        }
+                        Log.i("BreathingSounds", String.format("All sounds initialized, %s sounds loaded", ZOMBIE_BREATHING_SOUND_FILES.length+1));
 
+                        // Set the initial position
                         gvrAudioEngine.setSoundObjectPosition(
                                 zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
-                        gvrAudioEngine.playSound(zombieSoundId, true /* looped playback */);
+                        gvrAudioEngine.playSound(zombieSoundId, false);
                     }
                 })
                 .start();
 
         updateModelPosition(gvrAudioEngine);
+    }
+
+    public void updateZombieBreathing(final GvrAudioEngine gvrAudioEngine) {
+        // Update zombie breathing sound
+        if (gvrAudioEngine.isSoundPlaying(zombieSoundId)) {
+            return;
+        }
+
+        Random soundGenerator = new Random();
+        int soundIndex = soundGenerator.nextInt(ZOMBIE_BREATHING_SOUND_FILES.length);
+        String newSoundFile = ZOMBIE_BREATHING_SOUND_FILES[soundIndex];
+
+        int newZombieSoundId = gvrAudioEngine.createSoundObject(newSoundFile);
+
+        if (newZombieSoundId != GvrAudioEngine.INVALID_ID) {
+            // update the current sound to ensure we can follow the zombie model
+            zombieSoundId = newZombieSoundId;
+
+            gvrAudioEngine.setSoundObjectPosition(
+                    zombieSoundId, modelPosition[0], modelPosition[1], modelPosition[2]);
+            gvrAudioEngine.playSound(zombieSoundId, false);
+        }
     }
 
     public boolean onNewFrame(final GvrAudioEngine gvrAudioEngine) {
@@ -79,7 +114,9 @@ public class Zombie {
             modelPosition[2] = (float) (Math.sin(angleXZ) * newDistance);
 
             updateModelPosition(gvrAudioEngine);
+            updateZombieBreathing(gvrAudioEngine); // Zombie noises
 
+            // Player still not dead, return false
             return false;
         }
     }
