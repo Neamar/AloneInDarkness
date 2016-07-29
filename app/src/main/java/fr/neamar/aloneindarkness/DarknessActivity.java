@@ -68,7 +68,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
     public static final String PLAYER_DEATH_SOUND_FILE = "player_dead.wav";
-    public static final String BACKGROUND_SOUND_FILE = "background.mp3";
+    public static final String BREATHING_SOUND_FILE = "human-breath.wav";
 
     private final float[] lightPosInEyeSpace = new float[4];
 
@@ -107,6 +107,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private Zombie zombie;
 
     private Boolean playerIsDead = false;
+
+    private int playerBreathSoundId = GvrAudioEngine.INVALID_ID;
+    private MediaPlayer ambientMusicPlayer;
 
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -184,9 +187,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0f);
 
         // Start background sound
-        MediaPlayer mPlayer = MediaPlayer.create(this, R.raw.background);
-        mPlayer.setVolume(0.05f, 0.05f);
-        mPlayer.start();
+        ambientMusicPlayer = MediaPlayer.create(this, R.raw.background);
+        ambientMusicPlayer.setVolume(0.05f, 0.05f);
+        ambientMusicPlayer.start();
     }
 
     public void initializeGvrView() {
@@ -210,6 +213,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     @Override
     public void onPause() {
         gvrAudioEngine.pause();
+        ambientMusicPlayer.pause();
         super.onPause();
     }
 
@@ -485,6 +489,29 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         float[] modelPosition = new float[]{newX, newY, newZ};
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0.007f);
+
+        if(!gvrAudioEngine.isSoundPlaying(playerBreathSoundId)) {
+            playerBreathSoundId = GvrAudioEngine.INVALID_ID;
+        }
+
+        // Randomly start human breathing
+        if(Math.random() < .1 && playerBreathSoundId == GvrAudioEngine.INVALID_ID) {
+
+            new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            gvrAudioEngine.preloadSoundFile(BREATHING_SOUND_FILE);
+                            playerBreathSoundId = gvrAudioEngine.createSoundObject(BREATHING_SOUND_FILE);
+                            gvrAudioEngine.setSoundVolume(playerBreathSoundId, 0.3f);
+
+                            gvrAudioEngine.setSoundObjectPosition(
+                                    playerBreathSoundId, 0, 0, 0);
+                            gvrAudioEngine.playSound(playerBreathSoundId, false);
+                        }
+                    })
+                    .start();
+        }
     }
 
     /**
