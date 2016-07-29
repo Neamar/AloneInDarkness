@@ -361,6 +361,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                 new Runnable() {
                     @Override
                     public void run() {
+                        vibrator.vibrate(new long[] {0L, 250L, 150L, 350L, 150L, 350L, 150L, 350L, 150L, 350L, 150L, 350L}, -1);
+
                         // Start spatial audio playback of SOUND_FILE at the model postion. The returned
                         //zombieSoundId handle is stored and allows for repositioning the sound object whenever
                         // the cube position changes.
