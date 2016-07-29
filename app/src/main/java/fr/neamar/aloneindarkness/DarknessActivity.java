@@ -38,6 +38,8 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
@@ -53,7 +55,10 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     public static final float CAMERA_Z = 0.01f;
 
+    // Accuracy to find a Zombie
     public static final float YAW_LIMIT = 0.35f;
+    // Accuracy to reload
+    public static final float PITCH_LIMIT = 1.2f;
 
     public static final int COORDS_PER_VERTEX = 3;
 
@@ -66,9 +71,11 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final float MIN_MODEL_DISTANCE = 3.0f;
     public static final float MAX_MODEL_DISTANCE = 7.0f;
 
-    public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
-    public static final String PLAYER_DEATH_SOUND_FILE = "player_dead.wav";
-    public static final String BACKGROUND_SOUND_FILE = "background.mp3";
+    public static final String HANDGUN_SOUND_FILE = "handgun/shot.wav";
+    public static final String PLAYER_DEATH_SOUND_FILE = "player/death.wav";
+    public static final String BREATHING_SOUND_FILE = "player/breath.wav";
+    public static final String SHELL_CASING_SOUND_FILE = "handgun/shell-casing-drop.wav";
+    public static final String RELOAD_SOUND_FILE = "handgun/reload-case-1.wav";
 
     private final int WATER_DROP_FREQUENCY_SECONDS = 10;
 
@@ -107,8 +114,15 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     private ZombieLoader zombieLoader;
     private Zombie zombie;
+    private int bulletsLeft = 6;
+    private int maxBullets = 6;
+    private int reloadingSoundId = GvrAudioEngine.INVALID_ID;
+
 
     private Boolean playerIsDead = false;
+
+    private int playerBreathSoundId = GvrAudioEngine.INVALID_ID;
+    private int playerReloadingSoundId = GvrAudioEngine.INVALID_ID;
 
     private int nextWaterCount;
     private int countSinceLastWater;
@@ -119,6 +133,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
             "water/water_drops_4.wav"
     };
 
+    private MediaPlayer ambientMusicPlayer;
 
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -199,9 +214,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         countSinceLastWater = 0;
 
         // Start background sound
-        MediaPlayer mPlayer = MediaPlayer.create(this, R.raw.background);
-        mPlayer.setVolume(0.05f, 0.05f);
-        mPlayer.start();
+        ambientMusicPlayer = MediaPlayer.create(this, R.raw.background);
+        ambientMusicPlayer.setVolume(0.05f, 0.05f);
+        ambientMusicPlayer.start();
     }
 
     public void initializeGvrView() {
@@ -225,6 +240,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     @Override
     public void onPause() {
         gvrAudioEngine.pause();
+        ambientMusicPlayer.pause();
         super.onPause();
     }
 
@@ -342,8 +358,14 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
      */
     @Override
     public void onNewFrame(HeadTransform headTransform) {
-        if(playerIsDead) {
+        if (playerIsDead) {
             return;
+        }
+
+        if(reloadingSoundId != GvrAudioEngine.INVALID_ID && !gvrAudioEngine.isSoundPlaying(reloadingSoundId)) {
+            reloadingSoundId = GvrAudioEngine.INVALID_ID;
+            bulletsLeft++;
+            Log.i(TAG, "Reloaded. Ammo in magazine:" + bulletsLeft);
         }
 
         // Build the camera matrix and apply it to the ModelView.
@@ -362,12 +384,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         boolean isPlayerDead = zombie.onNewFrame(gvrAudioEngine);
 
-        if(isPlayerDead) {
+        if (isPlayerDead) {
             onPlayerDead(zombie);
         }
-
-        Log.d("nextWaterCount", Integer.toString(nextWaterCount));
-        Log.d("countSinceLastWater", Integer.toString(countSinceLastWater));
 
         if (countSinceLastWater >= nextWaterCount) {
             nextWaterCount = getNextWaterCount();
@@ -375,6 +394,29 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
             onWaterDrop();
         }
         ++countSinceLastWater;
+
+        // Convert object space to camera space. Use the headView from onNewFrame.
+        Matrix.multiplyMM(modelView, 0, headView, 0, zombie.modelCube, 0);
+        Matrix.multiplyMV(tempPosition, 0, modelView, 0, POS_MATRIX_MULTIPLY_VEC, 0);
+
+        float pitch = (float) Math.atan2(tempPosition[1], -tempPosition[2]);
+
+        if(pitch > PITCH_LIMIT && reloadingSoundId == GvrAudioEngine.INVALID_ID && bulletsLeft < maxBullets) {
+            Log.e(TAG, "Starting reload");
+            new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            gvrAudioEngine.preloadSoundFile(RELOAD_SOUND_FILE);
+                            reloadingSoundId = gvrAudioEngine.createSoundObject(RELOAD_SOUND_FILE);
+
+                            gvrAudioEngine.setSoundObjectPosition(
+                                    reloadingSoundId,0, -floorDepth / 2, 0);
+                            gvrAudioEngine.playSound(reloadingSoundId, false);
+                        }
+                    })
+                    .start();
+        }
     }
 
     protected void onPlayerDead(final Zombie killingZombie) {
@@ -382,9 +424,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                 new Runnable() {
                     @Override
                     public void run() {
-                        // Start spatial audio playback of SOUND_FILE at the model position. The returned
-                        //zombieSoundId handle is stored and allows for repositioning the sound object whenever
-                        // the cube position changes.
+                        vibrator.vibrate(new long[] {0L, 250L, 150L, 350L, 150L, 350L, 150L, 350L, 150L, 350L, 150L, 350L}, -1);
                         gvrAudioEngine.preloadSoundFile(PLAYER_DEATH_SOUND_FILE);
                         int deathSound = gvrAudioEngine.createSoundObject(PLAYER_DEATH_SOUND_FILE);
 
@@ -490,7 +530,22 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public void onCardboardTrigger() {
         Log.i(TAG, "onCardboardTrigger");
 
+        if (bulletsLeft <= 0) {
+            Log.i(TAG, "Out of ammmo.");
+            return;
+        }
+
+        if(reloadingSoundId != GvrAudioEngine.INVALID_ID) {
+            Log.i(TAG, "Is reloading");
+        }
+
+        bulletsLeft--;
+
+        Log.i(TAG, "Shooting. Bullets left:" + bulletsLeft);
+
+
         if (isLookingAtObject()) {
+            Log.i(TAG, "Killing zombie");
             hideObject();
             vibrator.vibrate(250);
         }
@@ -506,6 +561,29 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                         gvrAudioEngine.setSoundObjectPosition(
                                 handgunSoundId, 0, -floorDepth / 2, 0);
                         gvrAudioEngine.playSound(handgunSoundId, false);
+                    }
+                })
+                .start();
+
+        // Shell casing
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        new Timer().schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                gvrAudioEngine.preloadSoundFile(SHELL_CASING_SOUND_FILE);
+                                int shellCasingSoundId = gvrAudioEngine.createSoundObject(SHELL_CASING_SOUND_FILE);
+
+                                float x = (float) (0.1 * Math.random());
+                                float y = (float) (0.1 * Math.random());
+
+                                gvrAudioEngine.setSoundObjectPosition(
+                                        handgunSoundId, x, -floorDepth, y);
+                                gvrAudioEngine.playSound(shellCasingSoundId, false);
+                            }
+                        }, 150);
                     }
                 })
                 .start();
@@ -530,6 +608,29 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         float[] modelPosition = new float[]{newX, newY, newZ};
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0.007f);
+
+        if (!gvrAudioEngine.isSoundPlaying(playerBreathSoundId)) {
+            playerBreathSoundId = GvrAudioEngine.INVALID_ID;
+        }
+
+        // Randomly start human breathing
+        if (Math.random() < .1 && playerBreathSoundId == GvrAudioEngine.INVALID_ID) {
+
+            new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            gvrAudioEngine.preloadSoundFile(BREATHING_SOUND_FILE);
+                            playerBreathSoundId = gvrAudioEngine.createSoundObject(BREATHING_SOUND_FILE);
+                            gvrAudioEngine.setSoundVolume(playerBreathSoundId, 0.3f);
+
+                            gvrAudioEngine.setSoundObjectPosition(
+                                    playerBreathSoundId, 0, 0, 0);
+                            gvrAudioEngine.playSound(playerBreathSoundId, false);
+                        }
+                    })
+                    .start();
+        }
     }
 
     /**
