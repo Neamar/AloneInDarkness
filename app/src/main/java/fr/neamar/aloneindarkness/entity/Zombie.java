@@ -56,6 +56,7 @@ public class Zombie {
 
         double newDistance = distance - speed;
 
+        newDistance = Math.max(2, newDistance);
         if(newDistance < 2) {
             gvrAudioEngine.stopSound(zombieSoundId);
             return true;

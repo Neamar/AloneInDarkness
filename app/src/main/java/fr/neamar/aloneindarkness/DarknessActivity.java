@@ -17,6 +17,7 @@
 package fr.neamar.aloneindarkness;
 
 import android.content.Context;
+import android.media.MediaPlayer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Bundle;
@@ -67,6 +68,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     public static final String HANDGUN_SOUND_FILE = "handgun_shot.wav";
     public static final String PLAYER_DEATH_SOUND_FILE = "player_dead.wav";
+    public static final String BACKGROUND_SOUND_FILE = "background.mp3";
 
     private final float[] lightPosInEyeSpace = new float[4];
 
@@ -180,6 +182,11 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0f);
+
+        // Start background sound
+        MediaPlayer mPlayer = MediaPlayer.create(this, R.raw.background);
+        mPlayer.setVolume(0.05f, 0.05f);
+        mPlayer.start();
     }
 
     public void initializeGvrView() {
