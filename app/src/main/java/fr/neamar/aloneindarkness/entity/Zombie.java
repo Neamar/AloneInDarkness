@@ -5,13 +5,26 @@ import android.opengl.Matrix;
 
 import com.google.vr.sdk.audio.GvrAudioEngine;
 
+import java.util.Random;
+
 import fr.neamar.aloneindarkness.DarknessActivity;
 
 
 public class Zombie {
     public static String TAG = "Zombie";
     public static final String ZOMBIE_SOUND_FILE = "zombie_walk.wav";
-    public static final String ZOMBIE_DEATH_SOUND_FILE = "zombie_death.wav";
+    public static final String[] ZOMBIE_DEATH_SOUND_FILES = new String[] {
+            "zombies/death_1.wav",
+            "zombies/death_2.wav",
+            "zombies/death_3.wav",
+            "zombies/death_4.wav",
+            "zombies/death_5.wav",
+            "zombies/death_6.wav",
+            "zombies/death_7.wav",
+            "zombies/death_8.wav",
+            "zombies/death_9.wav",
+            "zombies/death_10.wav"
+    };
     public static final float ROTATION_SPEED = 0.3f;
 
 
@@ -128,8 +141,11 @@ public class Zombie {
                         // Start spatial audio playback of SOUND_FILE at the model postion. The returned
                         //zombieSoundId handle is stored and allows for repositioning the sound object whenever
                         // the cube position changes.
-                        gvrAudioEngine.preloadSoundFile(ZOMBIE_DEATH_SOUND_FILE);
-                        int deathSound = gvrAudioEngine.createSoundObject(ZOMBIE_DEATH_SOUND_FILE);
+                        Random randGenerator = new Random();
+                        int index = randGenerator.nextInt(ZOMBIE_DEATH_SOUND_FILES.length);
+
+                        gvrAudioEngine.preloadSoundFile(ZOMBIE_DEATH_SOUND_FILES[index]);
+                        int deathSound = gvrAudioEngine.createSoundObject(ZOMBIE_DEATH_SOUND_FILES[index]);
 
                         gvrAudioEngine.setSoundObjectPosition(
                                 deathSound, modelPosition[0], modelPosition[1], modelPosition[2]);
