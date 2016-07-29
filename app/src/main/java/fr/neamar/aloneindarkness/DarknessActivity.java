@@ -77,8 +77,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final String SHELL_CASING_SOUND_FILE = "handgun/shell-casing-drop.wav";
     public static final String RELOAD_SOUND_FILE = "handgun/reload-case-1.wav";
 
-    private final int WATER_DROP_FREQUENCY_SECONDS = 10;
-
     private final float[] lightPosInEyeSpace = new float[4];
 
     private FloatBuffer floorVertices;
@@ -123,15 +121,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
     private int playerBreathSoundId = GvrAudioEngine.INVALID_ID;
     private int playerReloadingSoundId = GvrAudioEngine.INVALID_ID;
-
-    private int nextWaterCount;
-    private int countSinceLastWater;
-    private static final String[] WATER_DROP_SOUND_FILES = new String[] {
-            "water/water_drops_1.wav",
-            "water/water_drops_2.wav",
-            "water/water_drops_3.wav",
-            "water/water_drops_4.wav"
-    };
 
     private MediaPlayer ambientMusicPlayer;
 
@@ -209,9 +198,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0f);
-
-        nextWaterCount = getNextWaterCount();
-        countSinceLastWater = 0;
 
         // Start background sound
         ambientMusicPlayer = MediaPlayer.create(this, R.raw.background);
@@ -388,13 +374,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
             onPlayerDead(zombie);
         }
 
-        if (countSinceLastWater >= nextWaterCount) {
-            nextWaterCount = getNextWaterCount();
-            countSinceLastWater = 0;
-            onWaterDrop();
-        }
-        ++countSinceLastWater;
-
         // Convert object space to camera space. Use the headView from onNewFrame.
         Matrix.multiplyMM(modelView, 0, headView, 0, zombie.modelCube, 0);
         Matrix.multiplyMV(tempPosition, 0, modelView, 0, POS_MATRIX_MULTIPLY_VEC, 0);
@@ -437,26 +416,6 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         playerIsDead = true;
     }
-
-    protected void onWaterDrop() {
-        new Thread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        String waterDropFile = getWaterDropFile();
-                        gvrAudioEngine.preloadSoundFile(waterDropFile);
-                        int waterDropSound = gvrAudioEngine.createSoundObject(waterDropFile);
-
-                        float xPosition = getRandomPosition();
-                        float zPosition = getRandomPosition();
-                        gvrAudioEngine.setSoundObjectPosition(waterDropSound, xPosition, 0, zPosition);
-
-                        gvrAudioEngine.playSound(waterDropSound, false);
-                    }
-                })
-                .start();
-    }
-
 
     /**
      * Draws a frame for an eye.
@@ -646,18 +605,5 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float yaw = (float) Math.atan2(tempPosition[0], -tempPosition[2]);
 
         return Math.abs(yaw) < YAW_LIMIT;
-    }
-
-    private int getNextWaterCount() {
-        return (int) (Math.random() * WATER_DROP_FREQUENCY_SECONDS * 60);
-    }
-
-    private String getWaterDropFile() {
-        int waterDropFileIndex = (int) Math.floor(Math.random() * WATER_DROP_SOUND_FILES.length);
-        return WATER_DROP_SOUND_FILES[waterDropFileIndex];
-    }
-
-    private float getRandomPosition() {
-        return (float) (Math.random() * MAX_MODEL_DISTANCE);
     }
 }
