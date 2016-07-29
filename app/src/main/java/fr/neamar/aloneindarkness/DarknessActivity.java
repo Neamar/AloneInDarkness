@@ -70,6 +70,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     public static final String PLAYER_DEATH_SOUND_FILE = "player_dead.wav";
     public static final String BACKGROUND_SOUND_FILE = "background.mp3";
 
+    private final int WATER_DROP_FREQUENCY_SECONDS = 10;
+
     private final float[] lightPosInEyeSpace = new float[4];
 
     private FloatBuffer floorVertices;
@@ -107,6 +109,16 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private Zombie zombie;
 
     private Boolean playerIsDead = false;
+
+    private int nextWaterCount;
+    private int countSinceLastWater;
+    private static final String[] WATER_DROP_SOUND_FILES = new String[] {
+            "water/water_drops_1.wav",
+            "water/water_drops_2.wav",
+            "water/water_drops_3.wav",
+            "water/water_drops_4.wav"
+    };
+
 
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -182,6 +194,9 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
 
         zombie = new Zombie(modelPosition, gvrAudioEngine, 0f);
+
+        nextWaterCount = getNextWaterCount();
+        countSinceLastWater = 0;
 
         // Start background sound
         MediaPlayer mPlayer = MediaPlayer.create(this, R.raw.background);
@@ -350,6 +365,16 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         if(isPlayerDead) {
             onPlayerDead(zombie);
         }
+
+        Log.d("nextWaterCount", Integer.toString(nextWaterCount));
+        Log.d("countSinceLastWater", Integer.toString(countSinceLastWater));
+
+        if (countSinceLastWater >= nextWaterCount) {
+            nextWaterCount = getNextWaterCount();
+            countSinceLastWater = 0;
+            onWaterDrop();
+        }
+        ++countSinceLastWater;
     }
 
     protected void onPlayerDead(final Zombie killingZombie) {
@@ -357,7 +382,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
                 new Runnable() {
                     @Override
                     public void run() {
-                        // Start spatial audio playback of SOUND_FILE at the model postion. The returned
+                        // Start spatial audio playback of SOUND_FILE at the model position. The returned
                         //zombieSoundId handle is stored and allows for repositioning the sound object whenever
                         // the cube position changes.
                         gvrAudioEngine.preloadSoundFile(PLAYER_DEATH_SOUND_FILE);
@@ -372,6 +397,26 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
 
         playerIsDead = true;
     }
+
+    protected void onWaterDrop() {
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        String waterDropFile = getWaterDropFile();
+                        gvrAudioEngine.preloadSoundFile(waterDropFile);
+                        int waterDropSound = gvrAudioEngine.createSoundObject(waterDropFile);
+
+                        float xPosition = getRandomPosition();
+                        float zPosition = getRandomPosition();
+                        gvrAudioEngine.setSoundObjectPosition(waterDropSound, xPosition, 0, zPosition);
+
+                        gvrAudioEngine.playSound(waterDropSound, false);
+                    }
+                })
+                .start();
+    }
+
 
     /**
      * Draws a frame for an eye.
@@ -500,5 +545,18 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         float yaw = (float) Math.atan2(tempPosition[0], -tempPosition[2]);
 
         return Math.abs(yaw) < YAW_LIMIT;
+    }
+
+    private int getNextWaterCount() {
+        return (int) (Math.random() * WATER_DROP_FREQUENCY_SECONDS * 60);
+    }
+
+    private String getWaterDropFile() {
+        int waterDropFileIndex = (int) Math.floor(Math.random() * WATER_DROP_SOUND_FILES.length);
+        return WATER_DROP_SOUND_FILES[waterDropFileIndex];
+    }
+
+    private float getRandomPosition() {
+        return (float) (Math.random() * MAX_MODEL_DISTANCE);
     }
 }
