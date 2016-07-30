@@ -43,6 +43,7 @@ import java.util.TimerTask;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
+import fr.neamar.aloneindarkness.entity.WaterDrops;
 import fr.neamar.aloneindarkness.entity.Zombie;
 import fr.neamar.aloneindarkness.entity.ZombieLoader;
 import fr.neamar.aloneindarkness.layoutdata.WorldLayoutData;
@@ -116,6 +117,7 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
     private int maxBullets = 6;
     private int reloadingSoundId = GvrAudioEngine.INVALID_ID;
 
+    private WaterDrops waterDrops;
 
     private Boolean playerIsDead = false;
 
@@ -193,6 +195,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         gvrAudioEngine = new GvrAudioEngine(this, GvrAudioEngine.RenderingMode.BINAURAL_HIGH_QUALITY);
 
         zombieLoader = new ZombieLoader();
+
+        waterDrops = new WaterDrops(gvrAudioEngine, MAX_MODEL_DISTANCE);
 
         // First zombie appears directly in front of user.
         float[] modelPosition = new float[]{0.0f, 0.0f, -MAX_MODEL_DISTANCE / 2.0f};
@@ -373,6 +377,8 @@ public class DarknessActivity extends GvrActivity implements GvrView.StereoRende
         if (isPlayerDead) {
             onPlayerDead(zombie);
         }
+
+        waterDrops.advanceWaterDropCounters();
 
         // Convert object space to camera space. Use the headView from onNewFrame.
         Matrix.multiplyMM(modelView, 0, headView, 0, zombie.modelCube, 0);
